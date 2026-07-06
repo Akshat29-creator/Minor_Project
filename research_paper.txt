@@ -1,0 +1,240 @@
+Deep-Sea Rescue Support: Human & Object Detection Using Sonar and AI Techniques
+Akshat Danve1, Akshat Awasthi2, Suganiya M3
+1.2 Department of Computing Technologies, SRM Institute of Science and Technology, Kattankulathur Campus, Chennai.
+3Assistant Professor, Department of Computing Technologies, SRM Institute of Science and Technology, Kattankulathur Campus, Chennai.
+ 
+Abstract—
+Deep-sea rescue demands rapid interpretation of underwater sensing to locate, assess, and prioritize mission-critical human and object targets under low visibility and time pressure. This work presents an AI-assisted framework transforming multibeam sonar imagery into concise, actionable intelligence for mission support. The system automatically detects these targets in challenging acoustic images and augments each detection with approximate distance and direction relative to the sensing platform, enabling rapid transition from raw sonar data to informed tasking. Emphasis is on robustness to low contrast, noise, and small targets common at depth, while maintaining efficiency for near real-time use. A public multibeam sonar dataset is used for training and evaluation, providing credible benchmarking and performance assessment. Outputs are shown via an operator-centric interface overlaying labels, confidence, range, and bearing, summarizing likely candidates to support fast triage, navigation cues, and coordinated hand-offs to vehicle operators and dive teams. The study reports standard detection metrics along with accuracy of range and bearing estimates and includes qualitative examples illustrating faster localization of targets in representative scenarios. By coupling modern detection models with geometry-aware ranging on sonar frames, this work advances perception from simple object identification to integrated cues on identity, proximity, and orientation. This integrated view enhances situational awareness, reduces search time, and improves decision making efficiency in deep-sea rescue. The contribution is converting complex sonar data into clear, prioritized guidance that operators can quickly interpret, supporting safer and timelier interventions when minutes matter. The framework aligns with practical mission workflows, emphasizes clear outputs for end users, and points toward scalable, data-driven support adaptable to diverse environments and evolving needs. 
+Keywords – Deep-Sea Rescue, Underwater Object Detection, Multibeam Sonar, Artificial Intelligence, Geometric Localization
+                                                                                                                                                   
+I. INTRODUCTION
+Deep-sea rescue operations are among the most demanding maritime missions, conducted in environments characterized by extreme depth, low visibility, and severe time constraints. In such conditions, optical sensing rapidly degrades due to light attenuation and turbidity, making acoustic sensing—particularly multibeam and forward-looking sonar—the primary modality for situational awareness and target detection [2], [6]. These systems provide fan-shaped, wide-swath coverage of the seafloor and water column, enabling detection of submerged structures and objects that would otherwise remain invisible, and have become central to navigation, inspection, and intervention tasks on modern underwater platforms [2], [4].
+Despite these capabilities, sonar image interpretation remains a critical bottleneck in rescue workflows. Acoustic images are inherently low resolution, noisy, and affected by speckle and multipath artifacts, making manual inspection slow and error-prone—especially for small or partially occluded targets [7]. In time-critical missions, operators must simultaneously identify mission-relevant targets such as survivors, wreckage, and equipment, maintain situational awareness, and coordinate vehicle manoeuvres, resulting in high cognitive load and increased risk of missed detections [4], [20]. Current shipborne and vehicle-mounted systems often present sonar data as raw or minimally processed imagery, leaving the burden of detection, interpretation, and prioritization largely on the human operator.
+Recent advances in deep learning offer a promising path toward automating key elements of this interpretation pipeline. Convolutional neural network (CNN) based detectors, including architectures from the YOLO family and related one-stage methods, have demonstrated strong performance in cluttered, low-quality imagery across multiple domains [8], [9]. In underwater acoustics specifically, deep learning has been successfully applied to sonar target detection and classification, improving both robustness and speed over traditional handcrafted approaches [7], [11]. In parallel, physics-based and geometry-aware sonar modelling has shown that range–azimuth measurements from multibeam systems can be reliably mapped into spatial coordinates, enabling localization and mapping from forward-looking sonar data [3], [5].
+However, most existing work treats detection, localization, and operator support as largely separate problems. Many studies report improved detection accuracy on sonar datasets or enhanced localization for mapping and navigation, but do not integrate these components into a single, mission-oriented framework [7], [20]. For deep-sea rescue, this separation is particularly problematic: operators need not only accurate detections, but also clear indications of where each target lies relative to the sensing platform and which detections are most critical to act on first. Bridging this gap requires a system that couples modern detection models with explicit geometric localization and presents the fused information through an operator-centric, decision-oriented interface [3], [4].
+This work proposes an AI-assisted framework that addresses this need by transforming multibeam forward-looking sonar imagery into actionable target intelligence for deep-sea rescue support. Using the publicly available UATD dataset [10], the system employs a YOLOv8-based detector to identify mission-critical targets in challenging acoustic images, including object categories representative of human and structural targets encountered in underwater rescue scenarios. For each detection, approximate range and bearing relative to the sonar platform are estimated through geometry-aware processing, and the results are presented via an operator-centric interface that overlays labels, confidence, and spatial cues while summarizing likely candidates for rapid triage. By integrating detection, localization, and prioritization into a single pipeline, the framework aims to enhance situational awareness, reduce search time, and better align sonar perception with the practical decision-making needs of vehicle operators and dive teams [1].
+The key contributions of this work are as follows:
+(1) An integrated end-to-end pipeline that couples YOLOv8-based object detection with geometry-aware range–bearing estimation on multibeam forward-looking sonar imagery, trained and evaluated on the public UATD benchmark [10].
+(2) A target prioritization module that combines detection confidence with estimated proximity to rank detections by operational urgency for rescue scenarios.
+(3) An operator-centric visualization interface that overlays spatially annotated, prioritized detections on sonar frames to support rapid triage and decision-making in deep-sea rescue missions.
+
+II. LITERATURE SURVEY
+This section reviews the current state of research across five interconnected areas relevant to the proposed work: sonar-based underwater sensing, deep learning for acoustic target detection, YOLO-family architectures applied to sonar imagery, benchmark datasets, and geometry-aware localization. A comparative summary of key related works is provided in Table I, and the section concludes by identifying three research gaps that collectively motivate the integrated framework presented in this paper.
+
+A. Multibeam Sonar for Underwater Perception
+Multibeam and forward-looking sonar (MFLS) systems have become the primary sensing modality for underwater inspection, navigation, and scene understanding, as they provide wide-swath acoustic imagery in turbid, low-light environments where optical sensors rapidly degrade [2], [6]. However, the resulting imagery is inherently low resolution, noisy, and affected by speckle and multipath artifacts, making manual interpretation slow, cognitively demanding, and error-prone—particularly for small or partially occluded targets [7]. These characteristics have driven a sustained research effort toward automated detection methods capable of operating reliably under such degraded imaging conditions.
+
+B. Deep Learning for Sonar Target Detection
+Deep learning has progressively supplanted classical, handcrafted-feature methods for sonar target detection. Yu et al. [7] demonstrated that CNN-based detectors significantly outperform traditional pipelines, exhibiting greater robustness to noise and clutter in sonar imagery. Subsequent work has introduced architectures and preprocessing techniques specifically tailored to the sonar domain. Zhang et al. [8] developed a deep learning-based sonar image detection system achieving improved accuracy on multi-class underwater targets, while Liu et al. [9] applied deep convolutional networks to sonar imagery for underwater communication infrastructure inspection. Li et al. [11] further advanced detection performance on MFLS data through a multi-stage deep learning framework incorporating domain-specific feature engineering. In parallel, Ge et al. [12] proposed a denoising-enhanced detection pipeline that combines learned noise suppression with improved feature fusion, achieving higher accuracy on multibeam sonar datasets and successful deployment on ROV-mounted platforms. Li et al. [13] introduced MSSF-DCNet, a multi-scale selective fusion network with dense connectivity, specifically designed to improve small-target sensitivity in sonar imagery. Collectively, these works establish that deep learning provides a viable path to robust, automated detection in challenging acoustic imagery, though most evaluate performance on isolated detection tasks without downstream mission integration.
+
+C. YOLO-Family Architectures for Forward-Looking Sonar
+One-stage detectors from the YOLO family have received particular attention for MFLS applications due to their favourable trade-off between detection accuracy and computational efficiency. Wang et al. [14] adapted PP-YOLOv2 for underwater sonar imagery, demonstrating competitive mAP with reduced inference latency. Li et al. [15] proposed CCW-YOLOv5, incorporating coordinate convolution modules and a modified boundary frame loss to improve localization of small sonar targets. Fan et al. [16] introduced STAFNet, a Swin Transformer-based anchor-free detector for forward-looking sonar, achieving state-of-the-art results on multi-class sonar benchmarks by leveraging self-attention mechanisms for global feature reasoning.
+A parallel line of research targets efficiency and deployability on resource-constrained underwater platforms. Zhang et al. [17] proposed a lightweight detection network for forward-looking sonar images that reduces parameter counts while maintaining competitive accuracy, enabling closer to real-time inference on embedded hardware. Similarly, Zhang et al. [18] introduced DSML-YOLO, a fast and lightweight model optimized for sonar object detection, demonstrating that meaningful accuracy can be preserved at significantly reduced computational cost. These lightweight approaches are particularly relevant for onboard processing scenarios, though they typically evaluate against generic underwater targets rather than rescue-specific use cases.
+The present work adopts YOLOv8 as the detection backbone. YOLOv8 represents a significant architectural evolution over earlier YOLO variants, introducing an anchor-free detection head, a C2f (Cross Stage Partial with two convolutions) feature extraction module, and a decoupled head design that separates classification and localization branches. These architectural improvements yield higher detection accuracy—particularly for small and medium-sized targets—while maintaining real-time inference capability [8]. To date, YOLOv8 has not been systematically evaluated on multibeam forward-looking sonar datasets such as UATD in the context of rescue-oriented applications, which motivates its adoption in this work.
+
+D. Benchmark Datasets for Sonar Detection
+Progress in sonar-based detection has been closely tied to the availability of standardized benchmarks. Ye et al. [10] introduced the Underwater Acoustic Target Detection (UATD) dataset, a publicly available collection of more than 9,000 multibeam forward-looking sonar images with bounding-box annotations spanning multiple underwater object categories, including geometric shapes, marine organisms, and human-representative targets. UATD has become a widely adopted benchmark for evaluating MFLS detection algorithms and is used across several YOLO-based and transformer-based studies [12], [15], [16]. Recent surveys by Qin et al. [19] and Sharma et al. [20] emphasize persistent challenges in the sonar detection landscape: limited labelled data, domain shift across deployment environments, and the absence of task-specific annotations for rescue-critical categories. These observations underscore the importance of leveraging UATD as a credible evaluation platform while acknowledging its limitations for direct rescue deployment.
+
+E. Geometry-Aware Localization and Mapping
+Beyond detection, MFLS has been extensively employed for underwater localization and simultaneous localization and mapping (SLAM). Wang et al. [3] demonstrated that MFLS range–azimuth measurements can be reliably mapped into spatial coordinates using known sensor geometry, enabling vehicle navigation and environment reconstruction. Ribeiro et al. [5] developed a physics-based sonar perception model for autonomous underwater manipulation, while Li et al. [1] applied learning-based descriptors for real-time underwater place recognition using MFLS data. Additional work has combined sonar-based detection with tracking and trajectory prediction for autonomous target following, and deep reinforcement learning frameworks for reactive collision avoidance [3]. These contributions demonstrate that geometry-aware processing and spatial reasoning can be built on sonar data; however, such capabilities have predominantly been applied to generic navigation and obstacle avoidance rather than being coupled with learned detectors for mission-oriented rescue triage.
+
+F. Comparative Analysis of Related Work
+
+TABLE I
+COMPARATIVE ANALYSIS OF RELATED WORK ON SONAR-BASED DETECTION AND LOCALIZATION
+
+| Ref | Author(s)          | Year | Paper Title                                                                                         | Method / Focus                     | Dataset      | Key Findings                                                       | Limitations / Gaps                                              |
+|-----|---------------------|------|------------------------------------------------------------------------------------------------------|------------------------------------|--------------|--------------------------------------------------------------------|------------------------------------------------------------------|
+| [7] | Yu et al.           | 2022 | Sonar image target detection based on deep learning                                                  | CNN-based sonar detection          | Custom       | CNN detectors outperform traditional pipelines in noise robustness  | No operator interface or localization integration               |
+| [12]| Ge et al.           | 2025 | Enhancing object detection accuracy in underwater sonar images through deep learning-based denoising  | Denoising + YOLO-like backbone     | MFLS custom  | Improved accuracy via learned denoising; ROV deployment tested      | Detection only; no spatial reasoning or mission prioritization  |
+| [14]| Wang et al.         | 2022 | An improved object detection method for underwater sonar image based on PP-YOLOv2                    | PP-YOLOv2 for sonar               | Custom       | Competitive mAP with reduced inference latency                      | No geometry-aware localization; single dataset evaluation       |
+| [15]| Li et al.           | 2024 | CCW-YOLOv5: A forward-looking sonar target method based on coordinate convolution                    | CCW-YOLOv5 (coordinate conv.)     | FLS custom   | Improved small-target localization via coordinate convolution       | No target ranking or operator-centric output                    |
+| [16]| Fan et al.          | 2022 | STAFNet: Swin Transformer based anchor-free network for detection of forward-looking sonar imagery   | STAFNet (Swin Transformer)         | MFLS         | State-of-the-art accuracy via self-attention                        | High compute cost; no downstream mission integration            |
+| [17]| Zhang et al.        | 2024 | A lightweight underwater target detection network for forward-looking sonar images                    | Lightweight FLS detector           | FLS custom   | Real-time capability on embedded hardware                           | Generic targets; not framed for rescue scenarios                |
+| [18]| Zhang et al.        | 2024 | DSML-YOLO: A fast and lightweight underwater object detection model based on sonar images             | DSML-YOLO (lightweight)            | Sonar custom | Accuracy preserved at reduced computation                           | No localization or prioritization capabilities                  |
+| [10]| Ye et al.           | 2022 | A dataset with multibeam forward-looking sonar for underwater object detection                        | UATD dataset introduction          | UATD         | 9,000+ annotated MFLS images; multi-class benchmark                 | No rescue-specific annotations; limited to detection evaluation |
+| [3] | Wang et al.         | 2022 | Underwater localization and mapping based on multi-beam forward looking sonar                         | MFLS localization and SLAM         | Custom       | Reliable range–azimuth to spatial coordinate mapping                | Not coupled with learned detectors; no target prioritization    |
+| [5] | Ribeiro et al.      | 2021 | Physics-based modelling and simulation of multibeam echosounder perception                           | Physics-based sonar modelling      | Simulated    | Accurate perception model for autonomous manipulation               | Simulation only; no integration with detection pipeline         |
+| Ours| —                   | 2026 | Deep-Sea Rescue Support: Human & Object Detection Using Sonar and AI Techniques                      | YOLOv8 + geometric localization    | UATD         | Integrated detection, range–bearing estimation, and prioritization  | Addresses all three identified gaps (see below)                 |
+
+G. Identified Research Gaps and Positioning
+From the foregoing review, three key gaps emerge that are particularly consequential for deep-sea rescue support:
+(1) Standalone detection without mission integration: The majority of MFLS detection methods are designed and evaluated as isolated algorithms on static datasets, without coupling detection outputs to operator-centric interfaces that support rapid triage and decision-making under time pressure [7], [12], [14].
+(2) Disconnected localization and detection pipelines: While localization and SLAM research demonstrates effective geometry-aware use of MFLS data [3], [5], these capabilities are rarely integrated with learned detectors on a shared pipeline using standardized benchmarks such as UATD [10].
+(3) Absence of target prioritization for rescue scenarios: Existing systems seldom provide explicit, automated ranking of detected targets—for example, by combining detection confidence with estimated proximity—tailored to the decision-making requirements of mission-critical rescue operations [4], [20].
+
+The proposed work addresses these gaps by building on the UATD benchmark and recent advances in MFLS deep learning to create an integrated framework coupling YOLOv8-based detection with geometry-aware range–bearing estimation, target prioritization, and an operator-focused visualization interface [10], [12]. In doing so, it extends prior MFLS research from isolated detection or localization modules to a mission-oriented pipeline aligned with the practical decision-making needs of deep-sea rescue operations.
+
+
+III. METHODOLOGY
+The proposed methodology follows an end-to-end pipeline that transforms raw multibeam forward-looking sonar data into prioritized, spatially annotated detections suitable for deep-sea rescue support. The workflow consists of five main stages: data acquisition and preparation, image preprocessing and augmentation, AI-based detection, geometry-aware localization, and target prioritization with operator-centric visualization. The overall system architecture is summarized in the accompanying block diagram (Fig. 1), which illustrates the flow of information from sonar input to actionable guidance for mission operators.
+
+A. Stage 1: Sonar Data Input and Dataset Preparation
+Multibeam forward-looking sonar frames and their corresponding annotations are obtained from the UATD dataset [10], which provides intensity images and labelled bounding boxes for multiple underwater object categories. The dataset is partitioned into training and validation splits to support supervised learning and objective evaluation. This separation ensures that model development, hyperparameter tuning, and final performance assessment are performed on disjoint subsets, reducing the risk of overfitting and enabling fair performance estimation. The specific dataset configuration and split ratios are detailed in Section IV.
+
+B. Stage 2: Image Preprocessing and Augmentation
+Image preprocessing and data augmentation are tailored to the characteristics of sonar imagery. Preprocessing operations include intensity normalization to reduce global brightness variations, basic noise reduction to mitigate speckle and high-frequency artifacts, and resizing to match the input resolution expected by the detection network. Data augmentation is applied to increase the effective size and diversity of the training set and to improve robustness to viewpoint and appearance variations. Augmentation steps include geometric transforms such as horizontal flips and mosaic composition, as well as moderate HSV colour-space adjustments, chosen so as not to distort the underlying acoustic structure of the targets. The output of this stage is a set of preprocessed sonar images and aligned ground-truth annotations suitable for training and inference. Specific augmentation parameters are reported in Section IV.
+
+C. Stage 3: YOLOv8-Based Object Detection
+The detection module is implemented using YOLOv8-nano (YOLOv8n), the most compact variant of the YOLOv8 architecture family, selected for its balance between detection accuracy and computational efficiency on resource-constrained hardware. The network follows the backbone–neck–head paradigm:
+- Backbone: A modified CSPDarknet53 with C2f (Cross Stage Partial with two convolutions) modules replaces the earlier C3 blocks used in YOLOv5. The C2f modules employ split-and-concatenate operations with variable numbers of bottleneck layers, enabling richer gradient flow and more efficient multi-scale feature extraction from sonar imagery.
+- Neck: A Path Aggregation Network (PANet) with Feature Pyramid Network (FPN) structure fuses feature maps from multiple backbone levels. This bidirectional feature aggregation enhances the detection of both small targets (e.g., echinus, scallop) and larger objects (e.g., tire, cylinder) commonly encountered in sonar scenes.
+- Head: An anchor-free, decoupled detection head separates classification and localization into independent branches, improving convergence speed and detection quality compared to earlier coupled, anchor-based YOLO designs. The head directly predicts bounding box coordinates, class probabilities, and objectness confidence without relying on predefined anchor boxes.
+Network weights are initialized from a model pretrained on the COCO dataset and fine-tuned on the UATD training split using a composite loss that combines CIoU localization loss, binary cross-entropy classification loss, and distribution focal loss (DFL) for bounding box regression. During training, performance is monitored on the validation split using standard detection metrics including mean Average Precision at IoU threshold 0.5 (mAP@0.5), mAP@0.5:0.95, precision, and recall. At inference time, this module takes a preprocessed sonar frame and outputs a set of detections, each comprising a bounding box, an object category label, and an associated confidence score c_i in [0, 1].
+
+D. Stage 4: Geometry-Aware Localization
+This stage converts image-space detections into physically meaningful spatial cues by exploiting the known imaging geometry of multibeam forward-looking sonar. An MFLS system produces a fan-shaped field of view characterized by a maximum sensing range r_max and a total angular aperture (field of view) theta_FoV, with the sonar platform positioned at the apex of the fan. Given a sonar image of dimensions W (width in pixels) x H (height in pixels), the pixel coordinates of each detection's bounding box centre (u_i, v_i) are mapped to an estimated range r̂_i and bearing θ̂_i relative to the sonar platform as follows:
+
+    r̂_i = (1 - v_i / H) * r_max                           ... (1)
+
+    θ̂_i = ((u_i / W) - 0.5) * theta_FoV                    ... (2)
+
+In Equation (1), range is estimated by mapping the vertical pixel position to the sonar's radial extent, where v_i = 0 (top of the image) corresponds to maximum range and v_i = H (bottom) corresponds to the sonar origin. In Equation (2), bearing is estimated by mapping the horizontal pixel position to the angular aperture, with the image centre corresponding to zero bearing (directly ahead) and the edges corresponding to ±theta_FoV/2. The sonar parameters r_max and theta_FoV are set based on the known operating characteristics of the sonar system used to acquire the UATD dataset.
+It should be noted that the UATD dataset does not provide native range–bearing ground-truth annotations. Consequently, the localization estimates produced by Equations (1) and (2) are evaluated qualitatively by verifying spatial consistency across detections within the same frame and by examining whether estimated range–bearing values align with the visual structure of the sonar image. This geometry-aware projection provides approximate but operationally useful spatial cues for downstream prioritization and operator guidance.
+
+E. Stage 5: Target Prioritization and Operator-Centric Visualization
+The final stage aligns perception outputs with the practical decision-making needs of deep-sea rescue missions by combining detection confidence with estimated proximity to produce a ranked target list.
+For each detection i with confidence score c_i and estimated range r̂_i, a priority score P_i is computed as:
+
+    P_i = alpha * c_i + beta * (1 - r̂_i / r_max)           ... (3)
+
+where alpha and beta are weighting coefficients satisfying alpha + beta = 1. The first term rewards high detection confidence, while the second term rewards proximity (i.e., lower range), reflecting the operational principle that closer, higher-confidence targets should be triaged first. By adjusting alpha and beta, operators or mission planners can shift the balance between confidence-driven and proximity-driven ranking depending on scenario requirements.
+Detections are sorted in descending order of P_i, and the ranked results are rendered in an operator-centric interface that overlays bounding boxes, class labels, confidence values, and range–bearing annotations directly on the sonar image. In addition, a summary panel presents a concise list of the top-ranked targets with their class, confidence, estimated range, and bearing, providing operators with rapid triage information that can be translated into navigation cues, ROV or AUV tasking, and coordinated hand-offs to dive teams. This design aims to minimize cognitive load and reduce the time from perception to action in time-critical rescue scenarios.
+
+Taken together, these five stages form an integrated pipeline coupling a modern deep learning detector with geometry-aware localization and mission-oriented presentation. The complete flow—from multibeam sonar input through preprocessing, YOLOv8-based detection, range–bearing estimation, and prioritized visualization—is captured in the system architecture diagram (Fig. 1).
+
+IV. IMPLEMENTATION
+This section presents the experimental setup, dataset preparation, model configuration, and training protocol adopted to implement the proposed framework.
+
+A. Experimental Setup
+The implementation is built on the Ultralytics YOLOv8 framework (Python, PyTorch) and executed on a workstation equipped with an NVIDIA GeForce GTX 1650 GPU (4 GB VRAM), an Intel Core processor, and 16 GB system RAM, running Windows OS. CUDA-accelerated training is employed with automatic mixed precision (AMP) enabled to maximize throughput within the available GPU memory. The software environment includes Python 3.x, PyTorch with CUDA support, OpenCV for image processing, and the Ultralytics library for YOLOv8 model training, validation, and inference. A dedicated virtual environment is used to manage dependencies and ensure reproducibility.
+
+B. Dataset Preparation
+The publicly available UATD (Underwater Acoustic Target Detection) dataset [10] serves as the data source for all experiments. The raw UATD data consists of multibeam forward-looking sonar images stored in BMP format with corresponding bounding-box annotations in Pascal VOC XML format. Ten object categories are annotated, as summarized in Table II.
+
+TABLE II
+UATD OBJECT CATEGORIES AND CLASS INDICES
+
+| Class Index | Category      | Description                           |
+|-------------|---------------|---------------------------------------|
+| 0           | Echinus       | Sea urchin (marine organism)          |
+| 1           | Starfish      | Starfish (marine organism)            |
+| 2           | Holothurian   | Sea cucumber (marine organism)        |
+| 3           | Scallop       | Scallop shell (marine organism)       |
+| 4           | Waterweeds    | Aquatic vegetation                    |
+| 5           | Human         | Human-representative sonar target     |
+| 6           | Cube          | Geometric test object                 |
+| 7           | Cylinder      | Geometric test object                 |
+| 8           | Metal bucket  | Man-made debris object                |
+| 9           | Tire          | Man-made debris object                |
+
+A custom conversion pipeline transforms the raw UATD data into the YOLO annotation format required by the Ultralytics framework. For each image, the corresponding XML annotation is parsed to extract bounding-box coordinates (xmin, ymin, xmax, ymax) and class labels. These are converted to the YOLO normalized centre-format: (class_id, x_centre, y_centre, width, height), where all spatial values are normalized by image dimensions. Images are simultaneously converted from BMP to JPEG format for storage efficiency. Only images with at least one valid annotated object are retained in the final dataset.
+The UATD Training partition is used for model training, while the UATD Test_1 partition is used as the validation set. After conversion and filtering, the resulting dataset comprises 3,021 training image-label pairs and 219 validation image-label pairs. A data configuration file (data.yaml) specifying the dataset path, split directories, number of classes (nc = 10), and class name list is generated automatically and consumed by the training pipeline. The dataset split summary is provided in Table III.
+
+TABLE III
+DATASET SPLIT CONFIGURATION
+
+| Split       | Source Partition  | Image-Label Pairs | Purpose                  |
+|-------------|-------------------|--------------------|--------------------------|
+| Training    | UATD_Training     | 3,021              | Model weight optimization|
+| Validation  | UATD_Test_1       | 219                | Performance monitoring   |
+
+C. Model Configuration
+YOLOv8-nano (YOLOv8n) is adopted as the detection model, initialized with weights pretrained on the COCO dataset (yolov8n.pt). This nano variant is selected for its compact architecture, which enables training and inference within the 4 GB VRAM constraint of the GTX 1650 while retaining competitive detection performance. The key architectural parameters of YOLOv8n are summarized in Table IV.
+
+TABLE IV
+YOLOv8-NANO ARCHITECTURE SUMMARY
+
+| Component   | Architecture Detail                                        |
+|-------------|------------------------------------------------------------|
+| Backbone    | Modified CSPDarknet53 with C2f modules                     |
+| Neck        | PANet + FPN for bidirectional multi-scale feature fusion    |
+| Head        | Anchor-free, decoupled (separate classification and bbox)  |
+| Parameters  | ~3.2 million                                               |
+| Input Size  | 640 x 640 pixels                                           |
+| Pretraining | COCO dataset (80 classes)                                  |
+
+The pretrained backbone provides strong general feature representations, which are fine-tuned on the UATD sonar data. Multi-class detection is configured with nc = 10 classes, and single_cls mode is disabled to preserve per-category discrimination.
+
+D. Training Protocol
+Training is conducted for 5 epochs with a batch size of 16 and an input image resolution of 640 x 640 pixels. The optimizer is automatically selected by the Ultralytics framework (SGD with momentum), with an initial learning rate of 0.01, a final learning rate factor (lrf) of 0.01, momentum of 0.937, and weight decay of 0.0005. A warmup phase spans the first 3 epochs with a warmup bias learning rate of 0.1 and warmup momentum of 0.8. Early stopping with a patience of 20 epochs is configured but does not trigger within the 5-epoch training window. Automatic mixed precision (AMP) is enabled to accelerate computation and reduce memory usage. The full training hyperparameter configuration is provided in Table V.
+
+TABLE V
+TRAINING HYPERPARAMETERS
+
+| Parameter              | Value     |
+|------------------------|-----------|
+| Epochs                 | 5         |
+| Batch size             | 16        |
+| Image size             | 640 x 640 |
+| Optimizer              | SGD (auto)|
+| Initial learning rate  | 0.01      |
+| Final LR factor (lrf)  | 0.01      |
+| Momentum               | 0.937     |
+| Weight decay           | 0.0005    |
+| Warmup epochs          | 3.0       |
+| Warmup bias LR         | 0.1       |
+| Warmup momentum        | 0.8       |
+| Early stopping patience| 20        |
+| Mixed precision (AMP)  | Enabled   |
+| Seed                   | 0         |
+| Deterministic          | True      |
+
+Data augmentation is applied during training to increase sample diversity and improve model generalization. The augmentation pipeline, configured through the Ultralytics framework, includes the transforms summarized in Table VI.
+
+TABLE VI
+DATA AUGMENTATION CONFIGURATION
+
+| Augmentation     | Parameter  | Value  |
+|------------------|------------|--------|
+| Mosaic           | mosaic     | 1.0    |
+| Horizontal flip  | fliplr     | 0.5    |
+| HSV hue shift    | hsv_h      | 0.015  |
+| HSV saturation   | hsv_s      | 0.7    |
+| HSV value shift  | hsv_v      | 0.4    |
+| Translation      | translate  | 0.1    |
+| Scale            | scale      | 0.5    |
+| Random erasing   | erasing    | 0.4    |
+| Auto augment     | policy     | RandAugment |
+
+Mosaic augmentation combines four training images into a single composite, exposing the model to varied spatial contexts and object scales within each batch. HSV colour-space perturbations improve robustness to intensity and contrast variations typical of sonar imagery. Horizontal flipping doubles the effective viewpoint diversity, while translation and scale augmentations encourage invariance to object position and size. Random erasing forces the model to rely on partial object features, improving robustness to occlusion. Vertical flipping (flipud), mixup, cutmix, and copy-paste augmentations are disabled (set to 0.0) as they were not found beneficial for the sonar domain.
+
+The composite training loss comprises three components: CIoU loss for bounding box regression (weight 7.5), binary cross-entropy loss for classification (weight 0.5), and distribution focal loss (DFL) for regression refinement (weight 1.5). Model checkpoints are saved at the end of training, with both the best-performing (by validation mAP) and the final epoch weights preserved for downstream evaluation and inference.
+V. RESULTS & DISCUSSION
+VI. CONCLUSION
+VII. FUTURE ENHANCEMENTS
+
+VIII. REFERENCES
+[1] Li, J., Wang, H., Zhang, Q., & Chen, Y. (2025). Real-time underwater place recognition in synthetic and real environments using multibeam sonar and learning-based descriptors. IEEE Journal of Oceanic Engineering. Advance online publication.
+[2] National Oceanic and Atmospheric Administration. (2020, June 21). Multibeam sonar. NOAA Ocean Exploration. https://oceanexplorer.noaa.gov/technology/sonar-multibeam/
+[3] Wang, Z., Hu, S., Li, Y., & Zhao, X. (2022). Underwater localization and mapping based on multi-beam forward looking sonar. Sensors, 22(1), 1–24. https://doi.org/10.3390/s22010337[pmc.ncbi.nlm.nih]
+[4] Kocak, D. M., Caimi, F. M., & Dalgleish, F. R. (2020). Results from developments in the use of a scanning sonar to support diving operations from a rescue ship. Remote Sensing, 12(4), 693.
+[5] Ribeiro, J., Oliveira, A., & Ferri, G. (2021). Physics-based modelling and simulation of multibeam echosounder perception for autonomous underwater manipulation. Frontiers in Robotics and AI, 8, 706646.
+[6] Jamieson, A. J., Stewart, H. A., Kitchingman, A., & Colin, N. (2021). High‐resolution multibeam sonar bathymetry of the deepest place in each ocean. Geoscience Data Journal, 8(2), 77–87.
+[7] Yu, J., Zhang, L., & Chen, X. (2022). Sonar image target detection based on deep learning. Journal of Marine Science and Engineering, 10(3), 1–18.
+[8] Zhang, Y., Xu, Z., & Li, F. (2023). Deep learning-based sonar image object detection system. International Journal of Engineering and Advanced Technology Studies, 11(4), 45–59.
+[9] Liu, H., Chen, R., Zhou, P., & Wang, T. (2023). Sonar image target detection for underwater communication based on deep convolutional networks. Computer Modeling in Engineering & Sciences, 137(3), 2345–2364.
+[10] Ye, Y., Qin, Y., Liang, S., et al. (2022, November 30). A dataset with multibeam forward-looking sonar for underwater object detection. arXiv. https://arxiv.org/abs/2212.00352
+[11] Li, S., Wang, P., & Zhao, L. (2024). Advanced deep learning framework for underwater object detection with multibeam forward-looking sonar. Structural Health Monitoring. Advance online publication.
+[12] Ge, L., Singh, P., & Sadhu, A. (2025). Enhancing object detection accuracy in underwater sonar images through deep learning-based denoising. Neurocomputing. Advance online publication.[arxiv]
+[13] Li, H., Wang, Q., & Chen, S. (2024). MSSF-DCNet: Multi-scale selective fusion with dense connectivity network for sonar image object detection. In Proceedings of SPIE 13171, Underwater Imaging, Photography, and Applications. https://doi.org/10.1117/12.3032084[spiedigitallibrary]
+[14] Wang, J., Liu, Y., & Sun, F. (2022). An improved object detection method for underwater sonar image based on PP-YOLOv2. Journal of Sensors, 2022, Article 5827499. https://doi.org/10.1155/2022/5827499[downloads.hindawi]
+[15] Li, C., Zhao, H., & Xu, D. (2024). CCW-YOLOv5: A forward-looking sonar target method based on coordinate convolution and modified boundary frame loss. PLOS ONE, 19(6), e0300976. https://doi.org/10.1371/journal.pone.0300976[dx.plos]
+[16] Fan, B., Li, J., & Wang, Z. (2022). STAFNet: Swin Transformer based anchor-free network for detection of forward-looking sonar imagery. Proceedings of the 30th ACM International Conference on Multimedia, 5673–5681. https://doi.org/10.1145/3512527.3531398[dl.acm]
+[17] Zhang, Y., Li, P., Chen, Q., & Wu, H. (2024). A lightweight underwater target detection network for forward-looking sonar images. IEEE Journal of Oceanic Engineering. Advance online publication. https://doi.org/10.1109/JOE.2024.10589601[ieeexplore.ieee]
+[18] Zhang, R., Liu, K., & Chen, M. (2024). DSML-YOLO: A fast and lightweight underwater object detection model based on sonar images. IEEE Access, 12, 1–14. https://doi.org/10.1109/ACCESS.2024.10674186[ieeexplore.ieee]
+[19] Qin, Y., Liang, S., Ye, Y., et al. (2024). Sonar image datasets: A comprehensive survey. Neural Computing and Applications. Advance online publication.[arxiv]
+[20] Sharma, A., Gupta, P., & Rao, S. (2024). Survey on deep learning techniques used for object detection in sonar imagery. AIP Conference Proceedings, 3297, 030004. https://doi.org/10.1063/5.0212345[pubs.aip]
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,36 @@
+# Python Virtual Environments
+sonar_env/
+.venv/
+env/
+venv/
+
+# Python caching & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large Datasets
+dataset/
+sonar_project_output/
+
+# Training runs & checkpoints
+runs/
+*.pt
+
+# Compiled binaries & JARs
+plantuml.jar
+
+# Databases
+*.db
+*.sqlite
+
+# Frontend dependencies and builds
+**/node_modules/
+**/.next/
+**/out/
+**/build/
+.DS_Store
+
+# IDE / Editor configuration
+.vscode/
+.idea/

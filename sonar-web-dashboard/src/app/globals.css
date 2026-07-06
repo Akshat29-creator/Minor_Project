@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+@theme {
+  --color-abyss-bg: #090f15;
+  --color-abyss-panel: #131a22;
+  --color-abyss-glass: rgba(30, 39, 47, 0.6);
+  --color-neon-cyan: #00E5FF;
+  --color-neon-cyan-dim: rgba(0, 229, 255, 0.2);
+  --color-safety-orange: #FF5722;
+  --color-safety-orange-dim: rgba(255, 87, 34, 0.2);
+  --color-text-primary: #e6ebf4;
+  --color-text-muted: #a6abb4;
+
+  /* Landing Page Colors */
+  --color-background: #040f1b;
+  --color-on-background: #dde9fb;
+  --color-primary: #a1faff;
+  --color-primary-dim: #00e5ee;
+  --color-primary-container: #00f4fe;
+  --color-on-primary-container: #00575b;
+  --color-secondary: #d7e2ff;
+  --color-secondary-dim: #c9d4f0;
+  --color-tertiary: #64b3ff;
+  --color-tertiary-dim: #41a3f7;
+  --color-error: #ff716c;
+  --color-surface: #040f1b;
+  --color-surface-dim: #040f1b;
+  --color-surface-bright: #1b2d41;
+  --color-surface-container-lowest: #000000;
+  --color-surface-container-low: #061422;
+  --color-surface-container: #0b1b2a;
+  --color-surface-container-high: #102131;
+  --color-surface-container-highest: #152739;
+  --color-surface-variant: #152739;
+  --color-on-surface: #dde9fb;
+  --color-on-surface-variant: #a0acbd;
+  --color-outline: #6a7686;
+  --color-outline-variant: #3d4957;
+
+  /* Landing Page Fonts */
+  --font-headline: "Orbitron", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-technical: "Space Grotesk", sans-serif;
+}
+
+body {
+  background-color: var(--color-abyss-bg);
+  color: var(--color-text-primary);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.glass-panel {
+  background: var(--color-abyss-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border-radius: 12px;
+}
+
+/* Radar Animation Sweep */
+@keyframes radar-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-sweep {
+  animation: radar-spin 4s linear infinite;
+  background: conic-gradient(
+    from 0deg,
+    transparent 70%,
+    var(--color-neon-cyan-dim) 95%,
+    var(--color-neon-cyan) 100%
+  );
+  border-radius: 50%;
+}
+
+/* CRT Scanline FX */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.crt-overlay {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.1)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+.scanline {
+  width: 100%;
+  height: 10px;
+  background: rgba(0, 229, 255, 0.1);
+  opacity: 0.4;
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+/* Red Alert global pulse */
+@keyframes red-alert-pulse {
+  0% { box-shadow: inset 0 0 0px 0px rgba(255, 87, 34, 0); }
+  50% { box-shadow: inset 0 0 150px 0px rgba(255, 0, 0, 0.15); }
+  100% { box-shadow: inset 0 0 0px 0px rgba(255, 87, 34, 0); }
+}
+
+.alert-active {
+  animation: red-alert-pulse 2s ease-in-out infinite !important;
+  border-color: rgba(255, 0, 0, 0.3) !important;
+}
