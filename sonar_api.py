@@ -285,6 +285,266 @@ async def websocket_stream(websocket: WebSocket):
         except Exception:
             pass
 
+# ==================== HARDWARE STATUS ====================
+import serial
+import serial.tools.list_ports
+import threading
+import time as _time
+import asyncio
+
+# Hardware connection state (thread-safe via GIL for simple reads/writes)
+_hw_state = {
+    "esp32": {"connected": False, "port": None, "last_seen": None, "baud": 115200},
+    "servo": {"connected": False, "angle": 0, "last_sweep": None},
+    "sonar": {"connected": False, "last_distance_cm": None, "echo_count": 0},
+    "camera": {"connected": False, "device_id": None, "resolution": None},
+    "serial": None,  # serial.Serial instance
+}
+_hw_lock = threading.Lock()
+
+def _detect_esp32_port():
+    """Auto-detect ESP32 COM port by checking USB VID/PIDs."""
+    esp32_vids = [0x10C4, 0x1A86, 0x0403, 0x303A]  # CP210x, CH340, FTDI, Espressif native
+    for port in serial.tools.list_ports.comports():
+        if port.vid and port.vid in esp32_vids:
+            return port.device
+    return None
+
+def _try_open_serial(port=None, baud=115200):
+    """Try to open serial connection to ESP32."""
+    with _hw_lock:
+        if _hw_state["serial"] and _hw_state["serial"].is_open:
+            _hw_state["serial"].close()
+    
+    if port is None:
+        port = _detect_esp32_port()
+    if port is None:
+        return False, "No ESP32 detected on any COM port"
+    
+    try:
+        ser = serial.Serial(port, baud, timeout=2)
+        _time.sleep(2)  # wait for ESP32 reset
+        # Send a handshake command
+        ser.write(b"PING\n")
+        _time.sleep(0.5)
+        response = ser.readline().decode('utf-8', errors='ignore').strip()
+        
+        with _hw_lock:
+            _hw_state["serial"] = ser
+            _hw_state["esp32"]["connected"] = True
+            _hw_state["esp32"]["port"] = port
+            _hw_state["esp32"]["last_seen"] = datetime.now().isoformat()
+            _hw_state["esp32"]["baud"] = baud
+            
+            # If ESP32 responds with servo/sonar info
+            if "PONG" in response.upper() or response:
+                _hw_state["servo"]["connected"] = True
+                _hw_state["sonar"]["connected"] = True
+        
+        return True, f"Connected to ESP32 on {port}"
+    except Exception as e:
+        return False, str(e)
+
+def _check_camera():
+    """Check if a USB camera is available."""
+    try:
+        cap = cv2.VideoCapture(0)
+        if cap.isOpened():
+            ret, frame = cap.read()
+            if ret:
+                h, w = frame.shape[:2]
+                with _hw_lock:
+                    _hw_state["camera"]["connected"] = True
+                    _hw_state["camera"]["device_id"] = 0
+                    _hw_state["camera"]["resolution"] = f"{w}x{h}"
+                cap.release()
+                return True
+        cap.release()
+    except Exception:
+        pass
+    with _hw_lock:
+        _hw_state["camera"]["connected"] = False
+    return False
+
+@app.get("/api/hardware/status")
+def hardware_status():
+    """Returns the connection status of all hardware components."""
+    with _hw_lock:
+        return JSONResponse(content={
+            "status": "ok",
+            "components": {
+                "esp32": {
+                    "connected": _hw_state["esp32"]["connected"],
+                    "port": _hw_state["esp32"]["port"],
+                    "baud": _hw_state["esp32"]["baud"],
+                    "last_seen": _hw_state["esp32"]["last_seen"],
+                },
+                "servo": {
+                    "connected": _hw_state["servo"]["connected"],
+                    "current_angle": _hw_state["servo"]["angle"],
+                    "last_sweep": _hw_state["servo"]["last_sweep"],
+                },
+                "sonar": {
+                    "connected": _hw_state["sonar"]["connected"],
+                    "last_distance_cm": _hw_state["sonar"]["last_distance_cm"],
+                    "echo_count": _hw_state["sonar"]["echo_count"],
+                },
+                "camera": {
+                    "connected": _hw_state["camera"]["connected"],
+                    "device_id": _hw_state["camera"]["device_id"],
+                    "resolution": _hw_state["camera"]["resolution"],
+                },
+            },
+            "all_connected": all([
+                _hw_state["esp32"]["connected"],
+                _hw_state["servo"]["connected"],
+                _hw_state["sonar"]["connected"],
+                _hw_state["camera"]["connected"],
+            ]),
+        })
+
+@app.post("/api/hardware/connect")
+async def hardware_connect(request: Request):
+    """Attempt to connect to ESP32 and camera."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        pass
+    
+    port = body.get("port", None)
+    baud = body.get("baud", 115200)
+    
+    esp_ok, esp_msg = _try_open_serial(port, baud)
+    cam_ok = _check_camera()
+    
+    return JSONResponse(content={
+        "esp32": {"connected": esp_ok, "message": esp_msg},
+        "camera": {"connected": cam_ok},
+        "all_connected": esp_ok and cam_ok,
+    })
+
+@app.post("/api/hardware/disconnect")
+def hardware_disconnect():
+    """Disconnect from all hardware."""
+    with _hw_lock:
+        if _hw_state["serial"] and _hw_state["serial"].is_open:
+            _hw_state["serial"].close()
+        _hw_state["serial"] = None
+        _hw_state["esp32"]["connected"] = False
+        _hw_state["esp32"]["port"] = None
+        _hw_state["servo"]["connected"] = False
+        _hw_state["sonar"]["connected"] = False
+        _hw_state["camera"]["connected"] = False
+        _hw_state["camera"]["device_id"] = None
+    return {"status": "disconnected"}
+
+@app.get("/api/hardware/scan-ports")
+def scan_ports():
+    """List all available COM ports."""
+    ports = []
+    for port in serial.tools.list_ports.comports():
+        ports.append({
+            "device": port.device,
+            "description": port.description,
+            "vid": port.vid,
+            "pid": port.pid,
+            "manufacturer": port.manufacturer,
+        })
+    return {"ports": ports}
+
+@app.post("/api/hardware/servo")
+async def control_servo(request: Request):
+    """Send servo angle command to ESP32."""
+    body = await request.json()
+    angle = body.get("angle", 90)
+    with _hw_lock:
+        ser = _hw_state["serial"]
+        if ser and ser.is_open:
+            ser.write(f"SERVO:{angle}\n".encode())
+            _hw_state["servo"]["angle"] = angle
+            _hw_state["servo"]["last_sweep"] = datetime.now().isoformat()
+            return {"status": "ok", "angle": angle}
+    return JSONResponse(status_code=503, content={"status": "error", "message": "ESP32 not connected"})
+
+@app.get("/api/hardware/sonar-read")
+def sonar_read():
+    """Read current sonar distance from ESP32."""
+    with _hw_lock:
+        ser = _hw_state["serial"]
+        if ser and ser.is_open:
+            ser.write(b"READ\n")
+            _time.sleep(0.1)
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            try:
+                dist = float(line)
+                _hw_state["sonar"]["last_distance_cm"] = dist
+                _hw_state["sonar"]["echo_count"] += 1
+                return {"status": "ok", "distance_cm": dist, "echo_count": _hw_state["sonar"]["echo_count"]}
+            except ValueError:
+                return {"status": "ok", "raw": line, "distance_cm": None}
+    return JSONResponse(status_code=503, content={"status": "error", "message": "ESP32 not connected"})
+
+# --- Live camera capture + detection for hardware mode ---
+@app.get("/api/hardware/live-frame")
+async def live_camera_frame(
+    w_class: float = 0.50,
+    w_dist: float = 0.30,
+    w_angle: float = 0.20,
+):
+    """Capture a frame from the connected camera and run detection."""
+    try:
+        cam_id = _hw_state["camera"].get("device_id", 0)
+        cap = cv2.VideoCapture(cam_id if cam_id is not None else 0)
+        if not cap.isOpened():
+            return JSONResponse(status_code=503, content={
+                "status": "error", "message": "Camera not available"
+            })
+        
+        ret, frame = cap.read()
+        cap.release()
+        
+        if not ret:
+            return JSONResponse(status_code=503, content={
+                "status": "error", "message": "Failed to capture frame"
+            })
+        
+        pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        detections = run_inference(pil_img, w_class, w_dist, w_angle,
+                                   use_tta=False, use_tracking=True)
+        
+        # Read sonar data if available
+        sonar_data = None
+        with _hw_lock:
+            ser = _hw_state["serial"]
+            if ser and ser.is_open:
+                try:
+                    ser.write(b"SWEEP\n")
+                    line = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if line:
+                        parts = line.split(",")
+                        sonar_data = {"raw": line, "readings": []}
+                        for p in parts:
+                            try:
+                                a, d = p.split(":")
+                                sonar_data["readings"].append({
+                                    "angle": float(a), "distance_cm": float(d)
+                                })
+                            except ValueError:
+                                pass
+                except Exception:
+                    pass
+        
+        return JSONResponse(content={
+            "status": "success",
+            "targets": detections,
+            "image_b64": pil_to_b64(pil_img),
+            "sonar_data": sonar_data,
+            "timestamp": datetime.now().isoformat(),
+        })
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"status": "error", "message": str(e)})
+
 if __name__ == "__main__":
     import uvicorn
     print("[INFO] Launching Sonar API v2.0 on 0.0.0.0:8000")

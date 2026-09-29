@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   Activity, Target, AlertTriangle, Upload, Crosshair, Terminal, Waves,
   Battery, Thermometer, Download, ShieldCheck, Play, Square, X, Sun,
@@ -308,7 +309,7 @@ export default function AbyssalDashboard() {
         <div className="flex items-center gap-4">
           <Crosshair className={`w-8 h-8 ${isRedAlert ? "text-[#ff5555] animate-spin" : "text-[var(--color-neon-cyan)]"}`} />
           <div>
-            <h1 className="text-xl font-bold tracking-widest text-[#e6ebf4]">ABYSSAL NAVIGATOR <span className="text-xs opacity-40 ml-2">SRM INSTITUTE</span></h1>
+            <h1 className="text-xl font-bold tracking-widest text-[#e6ebf4]">ABYSSAL NAVIGATOR <span className="text-[10px] bg-[var(--color-neon-cyan)]/15 text-[var(--color-neon-cyan)] px-2 py-0.5 rounded tracking-widest ml-2 border border-[var(--color-neon-cyan)]/30">DEMO</span></h1>
             <p className={`text-[10px] tracking-[0.2em] font-mono uppercase ${isRedAlert ? "text-[#ff5555]" : "text-[var(--color-text-muted)]"}`}>
               DEEP-SEA RESCUE · TACTICAL ANALYSIS · TTA UNCERTAINTY ENGINE
             </p>
@@ -339,6 +340,9 @@ export default function AbyssalDashboard() {
           <button onClick={() => setIsDayMode(!isDayMode)} className="p-2 rounded-full border border-[rgba(255,255,255,0.1)] hover:border-[var(--color-neon-cyan)] transition-colors cursor-pointer" title="Toggle Day/Night Mode">
             {isDayMode ? <Sun className="w-4 h-4 text-yellow-400"/> : <Moon className="w-4 h-4 text-[var(--color-neon-cyan)]"/>}
           </button>
+          <Link href="/hardware" className="px-3 py-1.5 text-[10px] font-mono tracking-widest border border-[#00ff88]/30 rounded text-[#00ff88] hover:bg-[#00ff88]/15 transition-all">
+            HARDWARE MODE
+          </Link>
           <div className={`flex items-center gap-2 px-3 py-2 rounded-full border ${isRedAlert ? "bg-[rgba(200,0,0,0.2)] border-red-500" : "bg-[var(--color-abyss-panel)] border-[rgba(255,255,255,0.05)]"}`}>
             <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${isRedAlert ? "bg-red-500 shadow-[0_0_12px_red]" : "bg-[var(--color-neon-cyan)] shadow-[0_0_8px_var(--color-neon-cyan)]"}`}/>
             <span className={`text-xs font-mono tracking-widest ${isRedAlert ? "text-red-500" : "text-[var(--color-neon-cyan)]"}`}>{isRedAlert ? "RED ALERT" : (isDemoMode ? "DEMO" : "LIVE")}</span>

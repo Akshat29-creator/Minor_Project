@@ -119,9 +119,14 @@ export default function LandingPage() {
           <a className="text-[#64b3ff] hover:text-[#a1faff] transition-colors font-headline text-xs tracking-widest cursor-pointer" onClick={(e) => { e.preventDefault(); document.querySelector('#technology')?.scrollIntoView({ behavior: 'smooth' }); }}>TECHNOLOGY</a>
           <a className="text-[#64b3ff] hover:text-[#a1faff] transition-colors font-headline text-xs tracking-widest cursor-pointer" onClick={(e) => { e.preventDefault(); document.querySelector('#research')?.scrollIntoView({ behavior: 'smooth' }); }}>RESEARCH</a>
         </nav>
-        <Link href="/dashboard" className="bg-[#a1faff]/10 border border-[#a1faff]/30 text-[#a1faff] px-6 py-2 font-headline text-xs tracking-[0.2em] hover:bg-[#a1faff]/20 transition-all duration-300">
-          DASHBOARD
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/dashboard" className="bg-[#a1faff]/10 border border-[#a1faff]/30 text-[#a1faff] px-5 py-2 font-headline text-xs tracking-[0.2em] hover:bg-[#a1faff]/20 transition-all duration-300">
+            DEMO
+          </Link>
+          <Link href="/hardware" className="bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] px-5 py-2 font-headline text-xs tracking-[0.2em] hover:bg-[#00ff88]/20 transition-all duration-300">
+            HARDWARE
+          </Link>
+        </div>
       </header>
 
       <main ref={container} className="relative pt-20 overflow-hidden">
@@ -152,8 +157,11 @@ export default function LandingPage() {
                   The ocean depths are the final frontier of rescue logistics. Where optical cameras fail in the crushing dark, our acoustic AI illuminates the abyss. Powered by the <span className="text-[#a1faff]">UATD dataset</span>, Abyssal Navigator detects human remains and wreckage with pinpoint tactical precision.
                 </p>
                 <div className="hero-element flex flex-wrap gap-4">
-                  <Link href="/dashboard" className="group relative px-10 py-5 bg-gradient-to-r from-[#a1faff] to-[#00f4fe] text-[#00575b] font-headline font-bold text-sm tracking-[0.2em] transition-transform active:scale-95 shadow-[0_0_20px_rgba(161,250,255,0.3)] hover:shadow-[0_0_35px_rgba(161,250,255,0.6)]">
-                    LAUNCH MISSION DASHBOARD
+                  <Link href="/dashboard" className="group relative px-8 py-5 bg-gradient-to-r from-[#a1faff] to-[#00f4fe] text-[#00575b] font-headline font-bold text-sm tracking-[0.2em] transition-transform active:scale-95 shadow-[0_0_20px_rgba(161,250,255,0.3)] hover:shadow-[0_0_35px_rgba(161,250,255,0.6)]">
+                    DEMO DASHBOARD
+                  </Link>
+                  <Link href="/hardware" className="group relative px-8 py-5 bg-gradient-to-r from-[#00ff88] to-[#00e5aa] text-[#003d2e] font-headline font-bold text-sm tracking-[0.2em] transition-transform active:scale-95 shadow-[0_0_20px_rgba(0,255,136,0.3)] hover:shadow-[0_0_35px_rgba(0,255,136,0.6)]">
+                    HARDWARE MODE
                   </Link>
                   <button onClick={() => document.querySelector('#research')?.scrollIntoView({ behavior: 'smooth' })} className="px-8 py-5 border border-[#3d4957] text-[#dde9fb] font-headline text-sm tracking-[0.2em] hover:bg-[#102131] transition-colors cursor-pointer">
                     VIEW DATASET
