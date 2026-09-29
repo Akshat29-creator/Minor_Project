@@ -1,8 +1,5 @@
 # Project Overview, Problem Statement & Competitive Novelty
 ## Project: Deep-Sea Rescue Support: Human & Object Detection Using Sonar and AI Techniques
-**Authors**: Akshat Danve, Akshat Awasthi  
-**Supervisor**: Dr. Suganiya M, Department of Computing Technologies, SRM Institute of Science and Technology  
-**Conference**: Presented at WOSC 2026 (World Ocean Science Congress)
 
 ---
 
