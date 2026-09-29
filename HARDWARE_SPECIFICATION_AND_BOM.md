@@ -1,83 +1,90 @@
 # Hardware Architecture & Bill of Materials (BOM)
-## Project: Deep-Sea Rescue Support System (Sonar + AI)
+## Low-Cost Acoustic Emulation Testbed (~₹2,979 INR)
+**Project**: Deep-Sea Rescue Support: Human & Object Detection Using Sonar and AI Techniques  
+**System Type**: Hardware-in-the-Loop (HIL) Sonar Emulation Rig  
 
 ---
 
-## 1. Executive Summary & Hardware Strategy
+## 1. Overview & Engineering Rationale
 
-Deploying deep learning for underwater search and rescue requires bridging **acoustic sensing**, **real-time edge compute**, and **subsea-to-surface communications**. 
+Real multibeam forward-looking sonars (such as the Blueprint Subsea Oculus or Tritech Gemini) are capital-intensive marine sensors costing upwards of ₹25–30 Lakhs. In academic research and robotics development, standard engineering practice is to build a **Hardware-in-the-Loop (HIL) Emulation Testbed**.
 
-Because marine-grade acoustic equipment is capital-intensive, this document details two complete hardware architectures:
-1. **Tier 1: Low-Cost Hardware-in-the-Loop (HIL) Testbed (< ₹5,000 INR)** — A physical acoustic scanning rig and murky-water emulation testbed designed for laboratory validation, university evaluations, and project vivas.
-2. **Tier 2: Industrial / Deep-Sea Production Grade (₹45–60 Lakhs INR)** — The field-deployable specification utilizing a multibeam forward-looking sonar, subsea edge compute, and a tethered ROV platform as formulated in our research paper.
+This document outlines the complete hardware specification, itemized Bill of Materials (BOM), wiring pinouts, and firmware for building a physical **Acoustic Emulation Testbed for under ₹3,000 INR**.
+
+### How It Works:
+1. **Acoustic Wave Generation**: A waterproof ultrasonic acoustic transducer (operating at 40 kHz) emits real acoustic sound pulses through the medium (air or water tank) and listens for returning echoes.
+2. **Mechanical Swath Sweeping**: A micro metal-gear servo actuates the acoustic transducer in a continuous sweeping motion from **$0^\circ$ to $130^\circ$**, replicating the exact $130^\circ$ Field of View (FOV) used in our research paper.
+3. **Microcontroller Telemetry**: An ESP32 / Arduino captures the acoustic time-of-flight, converts it to distance (meters) and bearing (degrees), and streams the telemetry via USB Serial UART (`115200 baud`).
+4. **Live Pipeline Ingestion**: A Python bridge script receives the serial coordinates, maps the polar sweep to Cartesian acoustic frames, and pipes the data into the existing YOLOv8 model, FastAPI backend, and Next.js operator console.
 
 ---
 
-## 2. Tier 1: Low-Cost Hardware-in-the-Loop (HIL) Rig (< ₹5,000)
+## 2. Complete Bill of Materials (BOM)
 
-### 2.1 Concept & Working Principle
-In defense and maritime R&D, algorithm validation is performed on **Hardware-in-the-Loop (HIL)** rigs before risking expensive hardware. 
-- A waterproof ultrasonic acoustic transducer (40 kHz acoustic sound pulse) is mounted on a metal-gear servo motor.
-- The servo performs a sector scan sweeping across **$0^\circ$ to $130^\circ$** (matching the $130^\circ$ Field of View in our research paper).
-- The microcontroller measures the acoustic time-of-flight (distance $r$) at each step angle ($\theta$), formatting it as `(angle, distance)` telemetry.
-- The telemetry is streamed over USB Serial to your Python backend, converting polar coordinates into Cartesian acoustic frames fed into the YOLOv8 and Next.js dashboard pipeline.
+All components are standard, off-the-shelf parts readily available across Indian electronics distributors (Robu.in, ElectronicsComp, or Amazon India).
+
+| No. | Component Name | Technical Specification | Function in System | Sourcing (India) | Approx. Cost (INR) |
+|---|---|---|---|---|---|
+| **1** | **ESP32 NodeMCU Dev Board** (or Arduino Uno) | 32-bit Dual-Core 240MHz, CP2102 USB-UART, 30 GPIOs, 5V input | Controls servo motion, times acoustic echoes, and streams serial telemetry | Robu.in / Amazon | **₹450** |
+| **2** | **JSN-SR04T Waterproof Ultrasonic Transducer** | IP67 sealed acoustic probe, 40 kHz frequency, 20cm – 450cm detection range, 5V DC | Emits acoustic pulses and captures acoustic echoes; submersible probe | Robu.in / ElectronicsComp | **₹550** |
+| **3** | **MG90S Metal-Gear Micro Servo** | 180° rotation, 2.2 kg·cm torque, metal gear train, operating voltage 4.8V–6V | Sweeps the transducer across the $130^\circ$ forward-looking sonar aperture | Robu.in | **₹180** |
+| **4** | **Pan-Tilt / Servo Mount Bracket** | Acrylic or ABS mini bracket kit with mounting screws | Holds the acoustic transducer securely to the servo horn | Robu.in / DIY | **₹150** |
+| **5** | **IP67 Waterproof USB Snake Camera (Endoscope)** | 5-meter flexible cable, 6 adjustable LEDs, 640x480 resolution, USB interface | Provides optical validation in turbid/murky water tank directly to OpenCV | Amazon.in | **₹799** |
+| **6** | **Transparent Acrylic Tub / Water Container** | 15–20 Litre plastic/acrylic container | Serves as the localized test tank (turbidity simulated using soil/diluted milk) | Local Market / D-Mart | **₹350** |
+| **7** | **Breadboard, Jumper Wires & Power Accessories** | 400-point breadboard, Dupont wires (M-M, M-F), USB cable | Electrical breadboarding and power distribution | Local Electronics Store | **₹300** |
+| **8** | **Miniature Physical Targets** | Toy diver (human), toy submarine (ROV), soda can (cylinder), rubber tire | Physical objects placed in the scanning field for acoustic/visual detection | Household / Toys | **₹200** |
+| | **TOTAL ESTIMATED COST** | | | | **~₹2,979 INR** |
+
+*(Note: The compute processing is performed on your existing laptop, requiring zero additional expenditure for GPUs or SBCs).*
+
+---
+
+## 3. System Wiring & Electrical Pinouts
 
 ```
-       [Target / Obstacle]
-               ▲
-               │  Acoustic Echo (40 kHz)
-     [JSN-SR04T Waterproof Transducer]
-               │
-        [MG90S Servo Motor]  <--- Sweeps 0° to 130° FOV
-               │
-         [ESP32 / Arduino]
-               │  USB Serial (`pyserial` at 115200 baud)
-               ▼
-     [Laptop / Processing Unit]
-     • Polar-to-Cartesian Frame Generator
-     • YOLOv8 Detection & Metric Localization
-     • Next.js Operator Dashboard (Port 3000)
+   ┌────────────────────────────────────────────────────────┐
+   │                    ESP32 Dev Board                     │
+   │                                                        │
+   │   [VIN / 5V] ──────────────┬─────────────── [5V VCC]   │
+   │   [GND]      ──────────────┼─────────────── [GND]      │
+   │   [GPIO 5]   ───────────┐  │                           │
+   │   [GPIO 18]  ────────┐  │  │                           │
+   │   [GPIO 19]  ─────┐  │  │  │                           │
+   └───────────────────┼──┼──┼──┼───────────────────────────┘
+                       │  │  │  │
+         ┌─────────────┘  │  │  └───────────────────┐
+         │ (PWM)          │  │ (Trig)               │ (Echo)
+         ▼                ▼  ▼                      ▼
+  ┌──────────────┐     ┌────────────────────────────────────┐
+  │ MG90S Servo  │     │ JSN-SR04T Ultrasonic Module        │
+  │ • Red: 5V    │     │ • VCC: 5V        • TRIG: GPIO 5    │
+  │ • Brown: GND │     │ • GND: GND       • ECHO: GPIO 18   │
+  │ • Orange: D19│     │ • Separate Waterproof Sensor Probe │
+  └──────────────┘     └────────────────────────────────────┘
 ```
 
----
+### Detailed Connection Table:
 
-### 2.2 Complete Bill of Materials (BOM) — Student Setup
-
-| Component | Technical Specification | Purpose in System | Sourcing (India) | Approx. Cost (INR) |
-|---|---|---|---|---|
-| **ESP32 NodeMCU / Arduino Uno** | 32-bit dual-core, 240 MHz, CP2102 USB-to-UART driver | Controls servo sweep, measures acoustic echo timing, streams serial data | Robu.in / Amazon.in | ₹450 |
-| **JSN-SR04T Waterproof Ultrasonic Transducer** | IP67 sealed acoustic probe, 40 kHz frequency, 20 cm – 450 cm range, 5V DC | Emits acoustic pulses and captures acoustic echoes through water/air | Robu.in / ElectronicsComp | ₹550 |
-| **MG90S Metal-Gear Micro Servo** | 180° rotation, 2.2 kg·cm torque, metal gear train | Actuates the acoustic transducer across the $130^\circ$ sonar aperture | Robu.in | ₹180 |
-| **Mini Pan-Tilt / Servo Mount Bracket** | Acrylic or 3D-printed bracket for servo + sensor | Holds transducer securely on the servo horn | Robu.in / DIY | ₹150 |
-| **IP67 Waterproof USB Snake Camera (Endoscope)** | 5-meter flexible cable, 6 adjustable LEDs, 640x480 resolution, USB interface | For optical murky-water validation (live feed into `/ws/stream`) | Amazon.in | ₹799 |
-| **Transparent Acrylic Container / Mini Tank** | 15–20 Litre plastic/acrylic tub | Test water tank (soil/milk added to simulate deep-sea turbidity) | D-Mart / Local market | ₹350 |
-| **Breadboard, Jumper Wires & 5V Adapter** | 400-point breadboard, Dupont wires (M-M, M-F), 5V 2A power supply | Power distribution for servo and sensor | Local Electronics Shop | ₹300 |
-| **Targets for Detection** | Miniature toy diver (human), toy submarine (ROV), soda can (cylinder), small rubber tire | Real physical targets placed in the scanning area | Household items / Toys | ₹200 |
-| **Total Cost** | | | | **~₹2,979 INR** |
-
----
-
-### 2.3 Pinout & Wiring Connections
-
-#### ESP32 to JSN-SR04T Ultrasonic Sensor:
-| JSN-SR04T Pin | ESP32 Pin | Wire Color / Notes |
+#### 1. JSN-SR04T Sensor Board to ESP32:
+| JSN-SR04T Pin | ESP32 Pin | Description |
 |---|---|---|
-| **VCC** | `5V` (or `VIN`) | Red (Requires stable 5V) |
-| **GND** | `GND` | Black |
-| **TRIG** | `GPIO 5` | Yellow (Trigger pulse 10 µs) |
-| **ECHO** | `GPIO 18` | Green (Echo return pulse) |
+| **VCC** | `VIN` or `5V` | 5V Power supply |
+| **GND** | `GND` | Ground connection |
+| **TRIG** | `GPIO 5` | Ultrasonic trigger pulse output (10 µs high) |
+| **ECHO** | `GPIO 18` | Echo pulse return input |
 
-#### ESP32 to MG90S Servo Motor:
-| Servo Pin | ESP32 Pin | Notes |
+#### 2. MG90S Servo Motor to ESP32:
+| Servo Wire Color | ESP32 Pin | Description |
 |---|---|---|
-| **VCC (Red)** | External 5V / `VIN` | Do not power servo directly from 3.3V pin |
-| **GND (Brown/Black)** | Common `GND` | Must share common ground with ESP32 |
-| **PWM Signal (Orange/Yellow)**| `GPIO 19` | PWM control signal (50 Hz) |
+| **Red (Power)** | `VIN` or `5V` | 5V DC power (Do not use 3.3V pin) |
+| **Brown / Black**| `GND` | Common system ground |
+| **Orange / Yellow**| `GPIO 19` | 50 Hz PWM control signal |
 
 ---
 
-### 2.4 Microcontroller Firmware Snippet (ESP32 / Arduino C++)
-Upload this code to the ESP32 using the Arduino IDE:
+## 4. Microcontroller Firmware (ESP32 / Arduino C++)
+
+Flash the following code to the ESP32 using the Arduino IDE. It manages the mechanical $130^\circ$ sweep and transmits clean CSV telemetry `angle,distance` over serial.
 
 ```cpp
 #include <ESP32Servo.h>
@@ -87,42 +94,62 @@ const int trigPin = 5;
 const int echoPin = 18;
 const int servoPin = 19;
 
-// Sonar geometry matching research paper (130-degree FOV)
+// 130-degree total Field of View (matching research paper specifications)
+// Sweeps from 25 degrees to 155 degrees (Center = 90 degrees)
 const int START_ANGLE = 25;
-const int END_ANGLE = 155; // 155 - 25 = 130 degree aperture
+const int END_ANGLE = 155; 
+const int STEP_SIZE = 2; // Step resolution in degrees
 
 void setup() {
   Serial.begin(115200);
   sonarServo.attach(servoPin);
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
+  
+  // Center the servo on boot
+  sonarServo.write(90);
+  delay(1000);
 }
 
 long getDistanceCM() {
+  // Clear trigger
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
+  
+  // Send 10 microsecond trigger pulse
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-  long duration = pulseIn(echoPin, HIGH, 30000); // 30ms timeout
-  if (duration == 0) return 400; // max range fallback
+  
+  // Read echo travel time in microseconds (timeout at 30ms = ~5 meters)
+  long duration = pulseIn(echoPin, HIGH, 30000);
+  
+  if (duration == 0) {
+    return 450; // Fallback to maximum range if no echo detected
+  }
+  
+  // Speed of sound = 343 m/s = 0.0343 cm/microsecond
   return (duration * 0.0343) / 2;
 }
 
 void loop() {
-  // Sweep Forward (Left to Right)
-  for (int angle = START_ANGLE; angle <= END_ANGLE; angle += 2) {
+  // 1. Forward sweep (Left to Right: -65 deg to +65 deg)
+  for (int angle = START_ANGLE; angle <= END_ANGLE; angle += STEP_SIZE) {
     sonarServo.write(angle);
-    delay(20);
+    delay(25); // Allow servo to settle before pulsing
     long dist = getDistanceCM();
-    int normalizedAngle = angle - 90; // Center is 0 degrees (-65 to +65)
+    
+    // Normalize angle so 0 is directly ahead (-65 to +65 degrees)
+    int normalizedAngle = angle - 90;
     Serial.printf("%d,%ld\n", normalizedAngle, dist);
   }
-  // Sweep Backward (Right to Left)
-  for (int angle = END_ANGLE; angle >= START_ANGLE; angle -= 2) {
+
+  // 2. Return sweep (Right to Left: +65 deg to -65 deg)
+  for (int angle = END_ANGLE; angle >= START_ANGLE; angle -= STEP_SIZE) {
     sonarServo.write(angle);
-    delay(20);
+    delay(25);
     long dist = getDistanceCM();
+    
     int normalizedAngle = angle - 90;
     Serial.printf("%d,%ld\n", normalizedAngle, dist);
   }
@@ -131,67 +158,125 @@ void loop() {
 
 ---
 
-## 3. Tier 2: Field-Deployable Industrial / Marine Architecture
+## 5. Host-Side Integration Script (`serial_sonar_bridge.py`)
 
-For actual deep-sea search and rescue deployment on an offshore vessel, the system requires marine-certified hardware.
+Run this Python script on your laptop. It connects to the ESP32 via USB Serial, reads the real-time acoustic time-of-flight sweep, renders a synthetic 2D acoustic sector frame, and sends it directly to your existing `sonar_api.py` and Next.js operator dashboard.
 
+```python
+"""
+Serial-to-Sonar Bridge
+Reads acoustic telemetry from ESP32, renders 2D polar acoustic frame,
+and feeds it to the Deep-Sea Rescue Operator Dashboard.
+"""
+import serial
+import time
+import math
+import cv2
+import numpy as np
+import requests
+
+SERIAL_PORT = "COM3"  # Change to your ESP32 COM port (e.g., 'COM3' on Windows or '/dev/ttyUSB0' on Linux)
+BAUD_RATE = 115200
+API_URL = "http://localhost:8000/api/detect"
+
+# Frame parameters matching UATD sonar dimensions
+WIDTH, HEIGHT = 640, 640
+MAX_RANGE_M = 4.5  # 4.5 meters for JSN-SR04T sensor
+
+def main():
+    print(f"[INFO] Connecting to Acoustic Hardware on {SERIAL_PORT}...")
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+        time.sleep(2)
+        print("[SUCCESS] Hardware connected! Listening for acoustic sweep...")
+    except Exception as e:
+        print(f"[ERROR] Could not open serial port: {e}")
+        return
+
+    # Canvas for polar rendering
+    frame = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+    origin_x = WIDTH // 2
+    origin_y = HEIGHT - 20
+
+    while True:
+        try:
+            line = ser.readline().decode('utf-8', errors='ignore').strip()
+            if not line or "," not in line:
+                continue
+
+            parts = line.split(",")
+            bearing_deg = int(parts[0])     # -65 to +65
+            dist_cm = float(parts[1])       # Distance in cm
+            dist_m = dist_cm / 100.0
+
+            # Convert polar coordinates (r, theta) to Cartesian (x, y) pixels
+            angle_rad = math.radians(bearing_deg)
+            scale = (HEIGHT - 40) / MAX_RANGE_M
+            
+            x_px = int(origin_x + (dist_m * scale) * math.sin(angle_rad))
+            y_px = int(origin_y - (dist_m * scale) * math.cos(angle_rad))
+
+            # Draw acoustic echo intensity point
+            if 0 <= x_px < WIDTH and 0 <= y_px < HEIGHT:
+                cv2.circle(frame, (x_px, y_px), 4, (0, 255, 128), -1)
+
+            # Every full sweep, save frame and trigger AI detection
+            if abs(bearing_deg) >= 64:
+                # Add acoustic speckle noise simulation
+                noise = np.random.normal(0, 15, frame.shape).astype(np.uint8)
+                synthetic_sonar = cv2.add(frame, noise)
+
+                # Send to FastAPI endpoint
+                _, encoded_img = cv2.imencode(".jpg", synthetic_sonar)
+                files = {"file": ("scan.jpg", encoded_img.tobytes(), "image/jpeg")}
+                
+                try:
+                    res = requests.post(API_URL, files=files, timeout=0.5)
+                    if res.status_code == 200:
+                        data = res.json()
+                        targets = data.get("targets", [])
+                        if targets:
+                            print(f"[AI ALERT] Detected {len(targets)} targets! Top: {targets[0]['class']} (P:{targets[0]['priority_score']})")
+                except Exception:
+                    pass
+
+                # Slightly decay old acoustic trails for persistence
+                frame = cv2.addWeighted(frame, 0.90, np.zeros_like(frame), 0.10, 0)
+
+        except KeyboardInterrupt:
+            print("[INFO] Terminating bridge.")
+            ser.close()
+            break
+
+if __name__ == "__main__":
+    main()
 ```
-                    SURFACE STATION (Vessel Control Room)
-  ┌────────────────────────────────────────────────────────────────────────┐
-  │  Operator Workstation (Ruggedized Laptop)                              │
-  │  • Next.js Operator Dashboard (`sonar-web-dashboard`)                  │
-  │  • Topside Power Supply Unit (400V DC transmission down tether)        │
-  │  • Fathom-X Surface Box (Ethernet-over-Twisted-Pair Bridge)            │
-  └───────────────────────────────────┬────────────────────────────────────┘
-                                      │
-                                      │  100m–300m High-Strength
-                                      │  Neutral Buoyancy Tether
-                                      ▼
-                      UNDERWATER VEHICLE (ROV / AUV)
-  ┌────────────────────────────────────────────────────────────────────────┐
-  │  Watertight 4-inch Hard-Anodized Aluminum Tube (Rated to 300m Depth)   │
-  │                                                                        │
-  │  ┌──────────────────────────────┐    ┌──────────────────────────────┐  │
-  │  │   NVIDIA Jetson Orin NX      │    │  Fathom-X Subsea Transceiver │  │
-  │  │   • 16GB VRAM, 100 TOPS AI   │◄───┤  • 100 Mbps Ethernet link    │  │
-  │  │   • YOLOv8 TensorRT Engine   │    └──────────────────────────────┘  │
-  │  └──────────────┬───────────────┘                                      │
-  │                 ▲                                                      │
-  │                 │ Gigabit Ethernet                                     │
-  │  ┌──────────────┴───────────────┐    ┌──────────────────────────────┐  │
-  │  │  Blueprint Oculus M750d Sonar│    │  Vehicle Sensors             │  │
-  │  │  • 750 kHz / 1.2 MHz Dual Freq    │  • Bar30 Depth Sensor        │  │
-  │  │  • 130° Horiz. / 20° Vert.   │    │  • 9-Axis IMU (Heading)      │  │
-  │  └──────────────────────────────┘    └──────────────────────────────┘  │
-  └────────────────────────────────────────────────────────────────────────┘
-```
-
-### 3.1 Complete Industrial Bill of Materials (BOM)
-
-| Subsystem | Component Name | Manufacturer | Key Specifications | Interface | Estimated Cost (INR) |
-|---|---|---|---|---|---|
-| **Acoustic Imaging Sensor** | **Oculus M750d / M1200d** | Blueprint Subsea (UK) | 750 kHz / 1.2 MHz dual frequency, 130° horizontal aperture, 512 beams, 120m range, 1000m depth rating | 100 Mbps Ethernet (SubConn connector) | ₹28,00,000 – ₹35,00,000 |
-| **Alternative Sonar** | **Gemini 720i** | Tritech International (UK) | 720 kHz, 120° FOV, 0.25° angular resolution, real-time 30 Hz refresh | Ethernet / RS485 | ₹32,00,000 – ₹38,00,000 |
-| **Subsea Edge AI Compute** | **Jetson Orin NX Subsea Module** | NVIDIA / Connect Tech | 16GB VRAM, 100 TOPS AI compute, TensorRT optimized, 10–25W power draw | PCIe NVMe, Dual GbE, USB 3.2 | ₹1,60,000 – ₹2,20,000 |
-| **ROV Platform** | **BlueROV2 Heavy Configuration** | Blue Robotics (USA) | 8x T200 brushless thrusters, 6-DoF control, payload skid, 100m depth rating | Pixhawk Autopilot (ArduSub) | ₹8,50,000 – ₹11,00,000 |
-| **Watertight Pressure Housing** | **4-inch Aluminum Enclosure** | Blue Robotics | Hard-anodized aluminum tube, machined aluminum end caps, 400m depth rating | WetLink bulkheads | ₹85,000 – ₹1,20,000 |
-| **Tether & Comm System** | **Fathom High-Strength Tether (150m)** | Blue Robotics | 4 twisted pairs (24 AWG), neutral buoyancy in seawater, 450 kg breaking strength | Fathom-X HomePlug Ethernet | ₹1,80,000 – ₹2,50,000 |
-| **Subsea Navigation Sensors** | **Bar30 Depth Sensor + Compass** | Blue Robotics | 0.2 mbar resolution (depth accuracy to 2mm in water), temperature sensor | $I^2C$ bus | ₹25,000 – ₹35,000 |
-| **Power Distribution** | **Topside Power Supply (TPS)** | Blue Robotics | 400V DC down tether stepped down to 15V @ 50A inside subsea enclosure | High-voltage tether line | ₹3,00,000 – ₹4,00,000 |
-| **Customs & Import Duties**| Mandatory Govt of India Customs | Indian Customs | Integrated GST (18%) + Basic Customs Duty on imported marine electronic sensors | Direct import levy | ₹6,00,000 – ₹8,00,000 |
-| **Total (Industrial)** | | | | | **₹50,00,000 – ₹65,00,000 INR** |
 
 ---
 
-## 4. Hardware Comparison & Mapping
+## 6. Physical Assembly & Experimentation Guide
 
-| Feature | Tier 1: Lab HIL Testbed | Tier 2: Marine Production System |
-|---|---|---|
-| **Target Budget** | **< ₹5,000 INR** | **₹50,00,000+ INR** |
-| **Primary Acoustic Sensor** | JSN-SR04T (40 kHz, single transducer) | Blueprint Oculus M750d (750 kHz, 512 multibeam array) |
-| **Aperture / Field of View** | $130^\circ$ (via physical servo mechanical sweep) | $130^\circ$ (simultaneous acoustic beamforming) |
-| **Compute Engine** | Existing Host Laptop (Intel/AMD/NVIDIA) | Subsea NVIDIA Jetson Orin NX (TensorRT FP16) |
-| **Medium Tested** | Laboratory air / small water tank | Deep ocean / turbid seawater down to 100m+ depth |
-| **Telemetry Protocol** | USB Serial UART (`115200 baud`) | Gigabit Ethernet over Fathom-X HomePlug |
-| **Dashboard Interface** | Same Next.js Operator Dashboard | Same Next.js Operator Dashboard |
-| **Academic Purpose** | Proves engineering design, serial comms & UI | Full commercial deployment for search and rescue |
+### Step 1: Mechanical Assembly
+1. Mount the **MG90S servo motor** vertically on the base plate or acrylic bracket.
+2. Fasten the **JSN-SR04T transducer** onto the servo horn with zip-ties or mounting screws, ensuring the sensor face points horizontally forward.
+3. Align the servo horn so that a command of `90°` points the sensor directly forward (0° relative bearing).
+
+### Step 2: Turbid Water Optical Testing (Endoscope Setup)
+1. Fill the **acrylic container** with water.
+2. Add 20–30 mL of milk or a pinch of fine silt/clay powder to create realistic suspended turbidity (simulating turbid, low-visibility deep-sea water where human vision fails).
+3. Submerge the **miniature targets** (toy diver, toy submarine, metal can) at varying depths and positions.
+4. Submerge the **IP67 USB Endoscope camera** into the water:
+   - Notice how optical vision becomes blurry and degraded beyond a few centimeters.
+   - Run `run_sonar_dashboard.py` or `sonar_api.py` alongside to demonstrate that acoustic detection and geometry-aware localization overcome optical limitations.
+
+---
+
+## 7. How to Present and Defend This Setup in Your Viva / Defense
+
+When examiners ask:
+> *"Why didn't you mount this on a full-scale submarine or use an actual 30-lakh commercial multibeam sonar?"*
+
+**Deliver this exact response**:
+> *"In marine robotics and defense R&D, deploying untrained algorithms on expensive offshore hardware introduces unnecessary operational risk. Standard engineering practice is to build a **Hardware-in-the-Loop (HIL) Acoustic Emulation Testbed**.*
+> 
+> *Our testbed physically emulates the exact $130^\circ$ angular aperture of a multibeam forward-looking sonar using a 40 kHz acoustic transducer. It proves our complete end-to-end stack: physical acoustic time-of-flight measurement, microsecond pulse timing, UART serial streaming, polar-to-Cartesian coordinate mapping, YOLOv8 inference, and prioritized mission triage on our Next.js operator dashboard—all accomplished within an accessible academic budget of ₹2,979."*
